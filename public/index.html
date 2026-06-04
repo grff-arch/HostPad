@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HostPad - Remote PC Controller</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-main: #0b0f19;
+            --bg-card: #151d30;
+            --bg-input: #0d1321;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: rgba(255, 255, 255, 0.05);
+            --radius: 12px;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Карточки */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Шапка */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            transition: var(--transition);
+        }
+
+        .status-dot.error {
+            background-color: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+        }
+
+        /* Кнопки */
+        .btn {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: var(--transition);
+            -webkit-user-select: none;
+            user-select: none
+        }
+
+        .btn:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-accent {
+            background-color: var(--accent);
+            border-color: transparent;
+        }
+        .btn-accent:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        .btn-danger:hover {
+            background-color: var(--danger);
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-mute.active {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+        }
+
+        /* Сетки для кнопок */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .flex-col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .media-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Терминал */
+        .terminal-input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .terminal-input {
+            flex: 1;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .terminal-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+        }
+
+        .terminal-logs {
+            background-color: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px;
+            height: 140px;
+            overflow-y: auto;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.85rem;
+            color: #34d399;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Тосты (Уведомления) */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+            max-width: 320px;
+            width: calc(100% - 40px);
+        }
+
+        .toast {
+            background-color: var(--bg-card);
+            border-left: 4px solid var(--accent);
+            border-top: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            pointer-events: auto;
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .toast.danger {
+            border-left-color: var(--danger);
+        }
+
+        .toast-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .toast-message {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Адаптивность для микро-экранов */
+        @media(max-width: 400px) {
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            #toast-container {
+                right: 20px;
+                left: 20px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header class="card header">
+            <div class="brand">
+                <h1>HostPad</h1>
+                <div class="brand-meta">
+                    <i data-lucide="monitor" style="width: 14px; height: 14px;" aria-hidden="true"></i>
+                    <span>Рабочий ПК (Windows)</span>
+                </div>
+            </div>
+            <div class="status-badge">
+                <div id="status-indicator" class="status-dot"></div>
+                <span id="status-text">Подключено</span>
+            </div>
+        </header>
+
+        <section class="card media-group">
+            <div class="card-title">
+                <i data-lucide="sliders" style="width: 16px; height: 16px;" aria-hidden="true"></i> Мультимедиа
+            </div>
+            
+            <div class="grid-3">
+                <button class="btn" onclick="sendCmd('volume', 'down')">
+                    <i data-lucide="volume-1" aria-hidden="true"></i> Громкость -
+                </button>
+                <button class="btn" onclick="sendCmd('volume', 'up')">
+                    <i data-lucide="volume-2" aria-hidden="true"></i> Громкость +
+                </button>
+                <button id="mute-btn" class="btn btn-mute" onclick="toggleMute()">
+                    <i id="mute-icon" data-lucide="volume-x" aria-hidden="true"></i> Mute
+                </button>
+            </div>
+
+            <div class="grid-3">
+                <button class="btn" onclick="sendCmd('media', 'prev')" aria-label="Предыдущий трек">
+                    <i data-lucide="skip-back" aria-hidden="true"></i>
+                </button>
+                <button id="play-btn" class="btn btn-accent" onclick="togglePlayPause()" aria-label="Воспроизведение / Пауза">
+                    <i id="play-icon" data-lucide="play" aria-hidden="true"></i>
+                    <i id="pause-icon" data-lucide="pause" aria-hidden="true" style="display: none;"></i>
+                </button>
+                <button class="btn" onclick="sendCmd('media', 'next')" aria-label="Следующий трек">
+                    <i data-lucide="skip-forward" aria-hidden="true"></i>
+                </button>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <i data-lucide="power" style="width: 16px; height: 16px;" aria-hidden="true"></i> Питание и Система
+            </div>
+            <div class="flex-col">
+                <div class="grid-2">
+                    <button class="btn" onclick="sendCmd('system', 'monitor_off')">
+                        <i data-lucide="monitor-off" aria-hidden="true"></i> Выкл. монитор
+                    </button>
+                    <button class="btn" onclick="sendCmd('system', 'sleep')">
+                        <i data-lucide="moon" aria-hidden="true"></i> Спящий режим
+                    </button>
+                </div>
+                <button class="btn btn-danger" onclick="shutdownPC()">
+                    <i data-lucide="log-out" aria-hidden="true"></i> Выключить ПК
+                </button>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-title">
+                <i data-lucide="terminal" style="width: 16px; height: 16px;" aria-hidden="true"></i> Терминал
+            </div>
+            <div class="terminal-input-group">
+                <input type="text" id="term-input" class="terminal-input" placeholder="Введите команду (например, ping google.com)..." autocomplete="off" aria-label="Консольная команда">
+                <button class="btn btn-accent" onclick="sendTerminalCmd()" aria-label="Выполнить команду">
+                    <i data-lucide="corner-down-left" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div id="term-logs" class="terminal-logs" role="log" aria-live="polite">Система готова к работе...&#10;</div>
+        </section>
+    </div>
+
+    <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+    <script>
+        // Инициализация иконок после загрузки
+        lucide.createIcons();
+
+        let isMuted = false;
+        let isPlaying = false;
+        const apiEndpoint = '/api/command';
+
+        // Базовая функция отправки JSON
+        async function sendCmd(action, command) {
+            try {
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, command })
+                });
+
+                if (response.ok) {
+                    setOnlineStatus(true);
+                    showToast('Успешно', `Команда "${command}" выполнена.`);
+                    return response;
+                } else {
+                    throw new Error(`Код ответа: ${response.status}`);
+                }
+            } catch (error) {
+                setOnlineStatus(false);
+                showToast('Ошибка соединения', 'Не удалось связаться с сервером Хоста.', true);
+                console.error('API Error:', error);
+            }
+        }
+
+        // Логика кнопки Mute
+        function toggleMute() {
+            isMuted = !isMuted;
+            const muteBtn = document.getElementById('mute-btn');
+            
+            if (isMuted) {
+                muteBtn.classList.add('active');
+                sendCmd('volume', 'mute_on');
+            } else {
+                muteBtn.classList.remove('active');
+                sendCmd('volume', 'mute_off');
+            }
+        }
+
+        // Переключение состояния Play/Pause (исправление пустой кнопки)
+        async function togglePlayPause() {
+            isPlaying = !isPlaying;
+            
+            const playIcon = document.getElementById('play-icon');
+            const pauseIcon = document.getElementById('pause-icon');
+
+            if (isPlaying) {
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+            } else {
+                playIcon.style.display = 'block';
+                pauseIcon.style.display = 'none';
+            }
+
+            await sendCmd('media', 'play_pause');
+        }
+
+        // Безопасное выключение ПК
+        function shutdownPC() {
+            const confirmed = confirm("Вы уверены, что хотите ВЫКЛЮЧИТЬ удаленный компьютер?");
+            if (confirmed) {
+                sendCmd('system', 'shutdown');
+            }
+        }
+
+        // Отправка команды из терминала с выводом логов
+        async function sendTerminalCmd() {
+            const inputEl = document.getElementById('term-input');
+            const logsEl = document.getElementById('term-logs');
+            const command = inputEl.value.trim();
+
+            if (!command) return;
+
+            logsEl.textContent += `\n$ ${command}\n`;
+            logsEl.scrollTop = logsEl.scrollHeight;
+            inputEl.value = '';
+
+            try {
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'terminal', command: command })
+                });
+
+                if (response.ok) {
+                    setOnlineStatus(true);
+                    const data = await response.text();
+                    logsEl.textContent += data ? `${data}\n` : `Команда выполнена (нет ответа от вывода).\n`;
+                    showToast('Терминал', 'Команда успешно обработана.');
+                } else {
+                    throw new Error(`Ошибка сервера: ${response.status}`);
+                }
+            } catch (error) {
+                setOnlineStatus(false);
+                logsEl.textContent += `[Ошибка системы]: Не удалось получить ответ.\n`;
+                showToast('Ошибка терминала', 'Не удалось отправить команду.', true);
+            }
+
+            logsEl.scrollTop = logsEl.scrollHeight;
+        }
+
+        // Поддержка отправки по Enter в терминале
+        document.getElementById('term-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendTerminalCmd();
+        });
+
+        // Управление статусом подключения в шапке
+        function setOnlineStatus(isOnline) {
+            const dot = document.getElementById('status-indicator');
+            const text = document.getElementById('status-text');
+            if (isOnline) {
+                dot.classList.remove('error');
+                text.textContent = 'Подключено';
+            } else {
+                dot.classList.add('error');
+                text.textContent = 'Ошибка';
+            }
+        }
+
+        // Система уведомлений (Toast)
+        function showToast(title, message, isDanger = false) {
+            const container = document.getElementById('toast-container');
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${isDanger ? 'danger' : ''}`;
+            
+            toast.innerHTML = `
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 50);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
