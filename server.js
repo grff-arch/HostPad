@@ -3,7 +3,7 @@ const os = require("os");
 const path = require("path");
 const { exec } = require("child_process");
 const fs = require('fs/promises');
-const { stdout } = require("process");
+const { handlerCom } = require('./commands');
 
 const PORT = 3000;
 const getLocalIp = () => {
@@ -52,13 +52,7 @@ const server = http.createServer(async (req, res) => {
 
             const parsedData = JSON.parse(body);
             console.log(parsedData)
-
-            exec('calc.exe', (error,) => {
-                if (error) {
-                    console.error('Ошибка запуска')
-                }
-                console.log('Калькулятор запущен')
-            });
+            handlerCom(parsedData.command);
 
             res.statusCode = 200;
             res.end(JSON.stringify({ success: true}));
