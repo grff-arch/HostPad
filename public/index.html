@@ -80,7 +80,6 @@
             letter-spacing: -0.025em;
             background: linear-gradient(to right, #fff, var(--text-muted));
             -webkit-background-clip: text;
-            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -134,8 +133,7 @@
             justify-content: center;
             gap: 8px;
             transition: var(--transition);
-            -webkit-user-select: none;
-            user-select: none
+            user-select: none;
         }
 
         .btn:hover {
@@ -171,6 +169,55 @@
             background-color: rgba(239, 68, 68, 0.15);
             border-color: rgba(239, 68, 68, 0.3);
             color: var(--danger);
+        }
+
+        /* Всплывающий индикатор громкости (HUD) по центру экрана */
+        .volume-hud {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(13, 19, 33, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2000;
+        }
+
+        .volume-hud.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .hud-track {
+            width: 140px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .hud-progress {
+            width: 50%;
+            height: 100%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            transition: width 0.1s ease;
+        }
+
+        .hud-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: monospace;
+            color: var(--text-main);
         }
 
         /* Сетки для кнопок */
@@ -285,19 +332,10 @@
             color: var(--text-muted);
         }
 
-        /* Адаптивность для микро-экранов */
         @media(max-width: 400px) {
-            .grid-3 {
-                grid-template-columns: 1fr;
-            }
-            .grid-2 {
-                grid-template-columns: 1fr;
-            }
-            #toast-container {
-                right: 20px;
-                left: 20px;
-                max-width: none;
-            }
+            .grid-3 { grid-template-columns: 1fr; }
+            .grid-2 { grid-template-columns: 1fr; }
+            #toast-container { right: 20px; left: 20px; max-width: none; }
         }
     </style>
 </head>
@@ -324,10 +362,10 @@
             </div>
             
             <div class="grid-3">
-                <button class="btn" onclick="sendCmd('volume', 'down')">
+                <button class="btn" onclick="changeVolume('down')">
                     <i data-lucide="volume-1" aria-hidden="true"></i> Громкость -
                 </button>
-                <button class="btn" onclick="sendCmd('volume', 'up')">
+                <button class="btn" onclick="changeVolume('up')">
                     <i data-lucide="volume-2" aria-hidden="true"></i> Громкость +
                 </button>
                 <button id="mute-btn" class="btn btn-mute" onclick="toggleMute()">
@@ -382,17 +420,27 @@
         </section>
     </div>
 
+    <div id="volume-hud" class="volume-hud">
+        <i data-lucide="volume-2" style="width: 36px; height: 36px; color: var(--accent);" aria-hidden="true"></i>
+        <div id="hud-text" class="hud-text">50%</div>
+        <div class="hud-track">
+            <div id="hud-progress" class="hud-progress"></div>
+        </div>
+    </div>
+
     <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
     <script>
-        // Инициализация иконок после загрузки
+        // Инициализация иконок Lucide
         lucide.createIcons();
 
         let isMuted = false;
         let isPlaying = false;
+        let currentVolume = 50; 
+        let hudTimeout = null;
         const apiEndpoint = '/api/command';
 
-        // Базовая функция отправки JSON
+        // Базовая функция отправки JSON на бэкенд
         async function sendCmd(action, command) {
             try {
                 const response = await fetch(apiEndpoint, {
@@ -415,6 +463,49 @@
             }
         }
 
+        // Изменение громкости кнопками Громкость +/-
+        async function changeVolume(direction) {
+            const response = await sendCmd('volume', direction);
+            
+            if (response && response.ok) {
+                try {
+                    const data = await response.json();
+                    if (data.currentVolume !== undefined) {
+                        updateVolumeHUD(data.currentVolume);
+                    }
+                } catch (e) {
+                    // Локальный фейк-расчет, если бэкенд возвращает простой текст вместо JSON
+                    let fakeVolume = direction === 'up' ? currentVolume + 5 : currentVolume - 5;
+                    if (fakeVolume > 100) fakeVolume = 100;
+                    if (fakeVolume < 0) fakeVolume = 0;
+                    updateVolumeHUD(fakeVolume);
+                }
+            }
+        }
+
+        // Обновление и отображение всплывающего HUD-индикатора
+        function updateVolumeHUD(volumeLevel) {
+            currentVolume = volumeLevel;
+
+            const hud = document.getElementById('volume-hud');
+            const hudText = document.getElementById('hud-text');
+            const hudProgress = document.getElementById('hud-progress');
+
+            if (hud && hudText && hudProgress) {
+                hudText.textContent = `${volumeLevel}%`;
+                hudProgress.style.width = `${volumeLevel}%`;
+
+                // Включаем видимость HUD
+                hud.classList.add('show');
+
+                // Очищаем предыдущий таймер закрытия и ставим новый на 1.5 секунды затишья
+                clearTimeout(hudTimeout);
+                hudTimeout = setTimeout(() => {
+                    hud.classList.remove('show');
+                }, 1500);
+            }
+        }
+
         // Логика кнопки Mute
         function toggleMute() {
             isMuted = !isMuted;
@@ -429,7 +520,7 @@
             }
         }
 
-        // Переключение состояния Play/Pause (исправление пустой кнопки)
+        // Переключение состояния Play/Pause
         async function togglePlayPause() {
             isPlaying = !isPlaying;
             

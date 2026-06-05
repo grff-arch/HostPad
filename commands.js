@@ -11,6 +11,7 @@ const nircmdFolder = path.join(__dirname, "bin")
 const winCommands = {
     'up': `"${nircmd}" changesysvolume 4000`,
     'mute_on': `"${nircmd}" mutesysvolume 2`,
+    'mute_off': `"${nircmd}" mutesysvolume 0`,
     'down': `"${nircmd}" changesysvolume -4000`,
     'monitor_off': `"${nircmd}" monitor off`,
     'shutdown': `"${nircmd}" exitwin poweroff`,
