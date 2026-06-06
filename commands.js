@@ -35,17 +35,17 @@ const handlerCom = (command) => {
         return console.error('Ошибка, такой команды нет');
     };
 
-    if (systemComWin) {
+    if (PLATFORM === "win32") {
         exec(systemComWin,{cwd: nircmdFolder}, error => {
         if (error) {
             console.error('Ошибка выполнения', error.message);
         }
         console.log("Команда выполнилась")
     });
-    } else if (systemComLin) {
+    } else if (PLATFORM === "linux") {
         exec(systemComLin, error => {
         if (error) {
-            console.error('Ошибка выполнения', error.message);
+            return console.error('Ошибка выполнения', error.message);
         }
         console.log("Команда выполнилась")
     });
